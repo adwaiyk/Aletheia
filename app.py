@@ -4,6 +4,15 @@ from pyvis.network import Network
 import streamlit.components.v1 as components
 import tempfile
 import time
+import requests
+import json
+import os
+
+# Try importing the PDF generator module
+try:
+    from pdf_generator import generate_sba_pdf
+except ImportError:
+    st.error("⚠️ 'pdf_generator.py' not found. Please ensure it is in the same directory.")
 
 # --- 1. Page Configuration & Custom CSS ---
 st.set_page_config(page_title="Aletheia: SAR Generator", layout="wide")
@@ -17,6 +26,7 @@ st.markdown("""
     .stTextArea textarea { background-color: #112240; color: #ffffff; border: 1px solid #FFD700; }
     .stButton>button { background-color: #FFD700; color: #0A192F; font-weight: bold; border-radius: 5px; }
     .stButton>button:hover { background-color: #e6c200; color: #0A192F; }
+    div[data-testid="stFileUploader"] { background-color: #112240; border: 1px dashed #FFD700; padding: 10px; border-radius: 5px; }
     </style>
     """, unsafe_allow_html=True)
 
@@ -28,6 +38,15 @@ with st.sidebar:
     st.header("📂 Case File Ingestion")
     uploaded_file = st.file_uploader("Upload Transaction CSV", type="csv")
     st.info("Upload the 'synthetic_banking_data.csv' file generated in the previous step.")
+    
+    st.markdown("---")
+    st.markdown("**System Status:**")
+    # Quick check if Ollama is running
+    try:
+        requests.get("http://localhost:11434/")
+        st.success("🟢 Ollama (Llama 3) Online")
+    except:
+        st.error("🔴 Ollama Offline. Run 'ollama run llama3' in terminal.")
 
 if uploaded_file:
     # Load Data into Session State to persist across reruns
@@ -43,7 +62,7 @@ if uploaded_file:
         
         # Filtering to find the "Suspect"
         accounts = df['account_no'].unique()
-        # Default to the first account (in our generated data, the injected crimes are usually near the top)
+        # Default to the first account (likely our injected Structuring/Layering case)
         filter_acct = st.selectbox("Filter by Account (Select a suspect):", accounts)
         
         display_df = df[df['account_no'] == filter_acct]
@@ -64,10 +83,15 @@ if uploaded_file:
             w = float(row['amount'])
             
             # Add nodes and edges
-            net.add_node(src, label=src[:8]+"...", color='#FFD700', shape='dot')
-            net.add_node(dst, label=dst[:8]+"...", color='#00ff00', shape='dot')
+            # Truncate labels for cleaner graph
+            src_label = src[:8] + "..." if len(src) > 8 else src
+            dst_label = dst[:8] + "..." if len(dst) > 8 else dst
+            
+            net.add_node(src, label=src_label, color='#FFD700', shape='dot', title=src) # Gold for Suspect
+            net.add_node(dst, label=dst_label, color='#00ff00', shape='dot', title=dst) # Green for Counterparty
             net.add_edge(src, dst, value=w, title=f"Total: ₹{w:,.2f}")
             
+        # Physics settings for nice clustering
         net.barnes_hut(gravity=-8000, central_gravity=0.3, spring_length=200)
         
         # Render the graph
@@ -89,22 +113,53 @@ if uploaded_file:
 
         if st.button("🤖 Generate Citation-Backed Narrative"):
             with st.spinner("Agentic AI analyzing typologies against PMLA guidelines..."):
-                time.sleep(2) # Fake loading time for dramatic effect during demo
                 
-                # Mock LLM Output (We will replace this with Ollama in the next step)
-                st.session_state.narrative = f"""**Executive Summary:**
-The account {filter_acct} reflects a pattern of suspicious activity consistent with **Structuring (Smurfing)**, aimed at evading PMLA reporting thresholds.
+                # 1. Prepare the Data Context
+                # Convert the suspect's transactions into a clean string for the LLM
+                # We limit columns to reduce token usage and focus the model
+                context_data = display_df[['txn_date', 'txn_type', 'mode', 'amount', 'counterparty', 'txn_id']].to_string(index=False)
+                
+                # 2. The Master Prompt ("The Bible")
+                system_prompt = f"""You are an expert Financial Crime Compliance Officer for a major Indian Bank.
+Your task is to draft the "Grounds of Suspicion" (Part 7.2) for a Suspicious Transaction Report (STR) to be submitted to FIU-IND.
 
-**Detailed Analysis:**
-* **Structuring Pattern:** The account executed multiple cash deposits over a short timeframe.
-* **Threshold Evasion:** Each deposit was valued between ₹40,000 and ₹49,000. This is deliberately just below the ₹50,000 mandatory PAN quoting threshold.
-* **Typology Match:** The total cash influx is highly inconsistent with normal retail spending and strongly matches FIU-IND Structuring typologies.
+Here is the transaction history for Account {filter_acct}:
+{context_data}
 
-**Conclusion:**
-The pattern suggests an attempt to introduce illicit cash into the banking system while avoiding regulatory triggers. 
+INSTRUCTIONS:
+1. ANALYZE the data for "Structuring" (multiple cash deposits just under INR 50,000 to evade PAN reporting thresholds) or "Layering" (rapid fund movement).
+2. DRAFT a formal narrative.
+3. CITATION REQUIREMENT (CRITICAL): Every factual claim MUST be cited with the exact Txn ID in brackets. Example: "A cash deposit of 48,000 was made [1D640F1C9085]." Do not hallucinate IDs.
+4. FORMAT:
+   - Executive Summary
+   - Chronology of Events (use bullet points with citations)
+   - Grounds for Suspicion
+5. TONE: Objective, formal, legalistic. No conversational filler.
 
-Recommended for filing STR."""
-                st.rerun()
+Output only the report text, nothing else."""
+
+                # 3. Call Local Ollama (Llama 3) API
+                url = "http://localhost:11434/api/generate"
+                payload = {
+                    "model": "llama3",
+                    "prompt": system_prompt,
+                    "stream": False,
+                    "options": {
+                        "temperature": 0.1 # Low temperature for factual, rigid compliance text
+                    }
+                }
+                
+                try:
+                    response = requests.post(url, json=payload)
+                    response.raise_for_status()
+                    # Parse Ollama's response
+                    ai_response = response.json()['response']
+                    st.session_state.narrative = ai_response
+                    st.rerun()
+                except requests.exceptions.ConnectionError:
+                    st.error("🔴 Connection Error: Is Ollama running? Open your terminal and type `ollama run llama3`.")
+                except Exception as e:
+                    st.error(f"AI Generation Error: {e}")
 
         # Human-in-the-Loop Editor
         edited_narrative = st.text_area(
@@ -117,10 +172,9 @@ Recommended for filing STR."""
         if st.button("✅ Approve & Generate Official FIU-IND PDF"):
             # The diff checker logic
             if edited_narrative != st.session_state.narrative:
-                st.warning("Human edits detected. Delta logged to immutable Audit Trail.")
+                st.warning("⚠️ Human edits detected. Delta logged to immutable Audit Trail.")
             
             try:
-                from pdf_generator import generate_sba_pdf
                 # Pass the edited text and the filtered dataframe to the PDF generator
                 pdf_path = generate_sba_pdf(edited_narrative, display_df)
                 
@@ -140,4 +194,5 @@ Recommended for filing STR."""
                 st.error(f"Failed to generate PDF: {e}")
 
 else:
-    st.info("👈 Please upload the transactions CSV from the sidebar to begin the investigation.")
+    # Empty State
+    st.info("👈 Please upload the 'synthetic_banking_data.csv' from the sidebar to begin the investigation.")

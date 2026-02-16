@@ -3,3 +3,4 @@ faker
 streamlit
 pyvis
 fpdf2
+requests
