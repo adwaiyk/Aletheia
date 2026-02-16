@@ -60,10 +60,37 @@ if uploaded_file:
     with col_evidence:
         st.subheader("🔍 EVIDENCE: Transaction Data")
         
-        # Filtering to find the "Suspect"
-        accounts = df['account_no'].unique()
-        # Default to the first account (likely our injected Structuring/Layering case)
-        filter_acct = st.selectbox("Filter by Account (Select a suspect):", accounts)
+        # --- THE RULE ENGINE (Deterministic Trigger) ---
+        @st.cache_data
+        def run_rule_engine(data):
+            suspects = set()
+            
+            # RULE 1: Structuring (Smurfing)
+            # Flags accounts with 3 or more cash deposits between INR 40k-50k
+            cash_deposits = data[(data['mode'] == 'CASH') & (data['txn_type'] == 'CREDIT') & (data['amount'] >= 40000) & (data['amount'] < 50000)]
+            structuring_counts = cash_deposits.groupby('account_no').size()
+            suspects.update(structuring_counts[structuring_counts >= 3].index.tolist())
+            
+            # RULE 2: Layering (High Value / Velocity)
+            # Flags accounts involved in single rapid transfers over INR 5 Lakhs (500,000)
+            large_transfers = data[data['amount'] >= 500000]
+            suspects.update(large_transfers['account_no'].unique().tolist())
+            
+            return list(suspects)
+
+        # 1. Run the data through the Rule Engine first
+        suspect_accounts = run_rule_engine(df)
+        
+        # 2. Handle the Empty State (No crime found)
+        if not suspect_accounts:
+            st.success("✅ No suspicious activity detected in this batch by the Rule Engine.")
+            st.stop() # Halts the UI rendering here
+            
+        # 3. Populate dropdown ONLY with flagged suspects
+        filter_acct = st.selectbox(
+            f"🚨 Alert: {len(suspect_accounts)} Suspicious Account(s) Detected:", 
+            suspect_accounts
+        )
         
         display_df = df[df['account_no'] == filter_acct]
         st.dataframe(display_df, height=250, use_container_width=True)

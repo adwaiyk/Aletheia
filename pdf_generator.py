@@ -42,7 +42,18 @@ class SBAPDF(FPDF):
             self.text(x + 0.5, y + 3.5, 'X')
 
 def generate_sba_pdf(narrative, df):
-    safe_narrative = narrative.replace('₹', 'INR ').replace('**', '') 
+    # --- THE FIX: SANITIZE LLM ARTIFACTS ---
+    safe_narrative = (narrative
+        .replace('₹', 'INR ')
+        .replace('**', '')       # Remove markdown bold
+        .replace('•', '-')       # Replace bullet points with hyphens
+        .replace('“', '"')       # Replace smart quotes
+        .replace('”', '"')
+        .replace('‘', "'")
+        .replace('’', "'")
+        .replace('—', '-')       # Replace em dash
+        .replace('–', '-')       # Replace en dash
+    )
     
     pdf = SBAPDF()
     pdf.add_page()
