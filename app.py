@@ -119,8 +119,25 @@ Recommended for filing STR."""
             if edited_narrative != st.session_state.narrative:
                 st.warning("Human edits detected. Delta logged to immutable Audit Trail.")
             
-            st.success("Report Finalized! PDF generation triggered.")
-            # We will wire up the actual PDF download button in the next step!
+            try:
+                from pdf_generator import generate_sba_pdf
+                # Pass the edited text and the filtered dataframe to the PDF generator
+                pdf_path = generate_sba_pdf(edited_narrative, display_df)
+                
+                with open(pdf_path, "rb") as pdf_file:
+                    pdf_bytes = pdf_file.read()
+                    
+                st.success("Report Finalized! PDF generation triggered.")
+                
+                # Show the download button
+                st.download_button(
+                    label="📄 Download Official STR (PDF)",
+                    data=pdf_bytes,
+                    file_name="FIU_IND_SBA_Report.pdf",
+                    mime="application/pdf"
+                )
+            except Exception as e:
+                st.error(f"Failed to generate PDF: {e}")
 
 else:
     st.info("👈 Please upload the transactions CSV from the sidebar to begin the investigation.")
