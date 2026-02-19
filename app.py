@@ -40,6 +40,14 @@ with st.sidebar:
     st.info("Upload the 'synthetic_banking_data.csv' file generated in the previous step.")
     
     st.markdown("---")
+    st.header("🌍 Jurisdiction Settings")
+    jurisdiction = st.selectbox(
+        "Select Regulatory Framework:",
+        ["India (FIU-IND)", "USA (FinCEN)", "UK (NCA)"],
+        help="Dynamically routes the AI's legal reasoning to match regional laws."
+    )
+    
+    st.markdown("---")
     st.markdown("**System Status:**")
     # Quick check if Ollama is running
     try:
@@ -141,29 +149,55 @@ if uploaded_file:
         if st.button("🤖 Generate Citation-Backed Narrative"):
             with st.spinner("Agentic AI analyzing typologies against PMLA guidelines..."):
                 
-                # 1. Prepare the Data Context
-                # Convert the suspect's transactions into a clean string for the LLM
-                # We limit columns to reduce token usage and focus the model
-                context_data = display_df[['txn_date', 'txn_type', 'mode', 'amount', 'counterparty', 'txn_id']].to_string(index=False)
+                # 1. Prepare the Data Context (Now including KYC data)
+                # Assuming your df now has these columns, we pass them to the LLM
+                context_data = display_df.to_string(index=False)
                 
-                # 2. The Master Prompt ("The Bible")
-                system_prompt = f"""You are an expert Financial Crime Compliance Officer for a major Indian Bank.
-Your task is to draft the "Grounds of Suspicion" (Part 7.2) for a Suspicious Transaction Report (STR) to be submitted to FIU-IND.
+                # --- THE ENTERPRISE MULTI-JURISDICTION ROUTER ---
+                if jurisdiction == "India (FIU-IND)":
+                    regulator = "Financial Intelligence Unit - India (FIU-IND)"
+                    law_context = "Prevention of Money Laundering Act, 2002 (PMLA)"
+                    rule_context = "Focus on 'Structuring' to evade the INR 50,000 PAN reporting threshold."
+                    form_format = """
+                    - PART 4: INDIVIDUALS LINKED TO TRANSACTIONS (Extract Name, ID)
+                    - PART 7.1: REASONS FOR SUSPICION (Categorize the anomaly)
+                    - PART 7.2: GROUNDS OF SUSPICION (Chronological narrative with citations)
+                    """
+                
+                elif jurisdiction == "USA (FinCEN)":
+                    regulator = "Financial Crimes Enforcement Network (FinCEN)"
+                    law_context = "Bank Secrecy Act (31 U.S.C. 5318)"
+                    rule_context = "Focus on 'Structuring' to evade the $10,000 Currency Transaction Report (CTR) limit, or anomalies aggregating over $5,000."
+                    form_format = """
+                    - PART II: SUSPECT INFORMATION (Extract Name, Address, DOB, SSN/TIN if available)
+                    - PART III: SUSPICIOUS ACTIVITY INFORMATION (Date range, Total dollar amount involved)
+                    - PART V: SUSPICIOUS ACTIVITY EXPLANATION/DESCRIPTION (Chronological narrative with citations)
+                    """
+                
+                else: # UK (FCA)
+                    regulator = "Financial Conduct Authority (FCA)"
+                    law_context = "UK Market Abuse Regulation (UK MAR)"
+                    rule_context = "Focus on suspected Market Abuse, Insider Dealing, or suspicious financial instrument orders."
+                    form_format = """
+                    - IDENTITIES OF PERSONS CARRYING OUT TRANSACTIONS (Extract Name, DOB, Address)
+                    - DESCRIPTION OF THE TRANSACTION(S) (Include prices, sizes, and instrument details if available)
+                    - REASONS FOR SUSPECTING INSIDER DEALING/MARKET MANIPULATION (Chronological narrative with citations)
+                    """
 
-Here is the transaction history for Account {filter_acct}:
+                # 2. The Dynamic Master Prompt
+                system_prompt = f"""You are a Senior Financial Crime Compliance Officer.
+Your task is to draft an official Suspicious Activity Report for {regulator} under the {law_context}.
+
+Here is the transaction and KYC history for the flagged account:
 {context_data}
 
 INSTRUCTIONS:
-1. ANALYZE the data for "Structuring" (multiple cash deposits just under INR 50,000 to evade PAN reporting thresholds) or "Layering" (rapid fund movement).
-2. DRAFT a formal narrative.
-3. CITATION REQUIREMENT (CRITICAL): Every factual claim MUST be cited with the exact Txn ID in brackets. Example: "A cash deposit of 48,000 was made [1D640F1C9085]." Do not hallucinate IDs.
-4. FORMAT:
-   - Executive Summary
-   - Chronology of Events (use bullet points with citations)
-   - Grounds for Suspicion
-5. TONE: Objective, formal, legalistic. No conversational filler.
+1. LEGAL ANALYSIS: {rule_context}
+2. CITATION REQUIREMENT (CRITICAL): Every factual claim (amounts, dates, behaviors) MUST be cited with the exact Txn ID in brackets. Example: "A deposit of 48,000 was made [1D640F1C9085]."
+3. FORMATTING: You MUST structure your report using EXACTLY these official form headers:
+{form_format}
 
-Output only the report text, nothing else."""
+Output only the highly formal, legalistic report text. Do not include conversational filler."""
 
                 # 3. Call Local Ollama (Llama 3) API
                 url = "http://localhost:11434/api/generate"
@@ -196,14 +230,16 @@ Output only the report text, nothing else."""
             help="Citations link back to the Evidence panel."
         )
 
-        if st.button("✅ Approve & Generate Official FIU-IND PDF"):
+        # Make the button name dynamic too!
+        if st.button(f"✅ Approve & Generate Official {jurisdiction} PDF"):
             # The diff checker logic
             if edited_narrative != st.session_state.narrative:
                 st.warning("⚠️ Human edits detected. Delta logged to immutable Audit Trail.")
             
             try:
-                # Pass the edited text and the filtered dataframe to the PDF generator
-                pdf_path = generate_sba_pdf(edited_narrative, display_df)
+                # --- THIS IS THE UPDATED LINE ---
+                # We pass 'jurisdiction' as the third argument now
+                pdf_path = generate_sba_pdf(edited_narrative, display_df, jurisdiction)
                 
                 with open(pdf_path, "rb") as pdf_file:
                     pdf_bytes = pdf_file.read()
@@ -212,9 +248,9 @@ Output only the report text, nothing else."""
                 
                 # Show the download button
                 st.download_button(
-                    label="📄 Download Official STR (PDF)",
+                    label=f"📄 Download Official Report (PDF)",
                     data=pdf_bytes,
-                    file_name="FIU_IND_SBA_Report.pdf",
+                    file_name=f"Aletheia_{jurisdiction[:3]}_SAR.pdf",
                     mime="application/pdf"
                 )
             except Exception as e:
