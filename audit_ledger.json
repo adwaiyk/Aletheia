@@ -7,5 +7,23 @@
         "jurisdiction": "UK (NCA)",
         "cryptographic_hash": "5e35ed2d89e785bb2b7c0000de578baa8a311a8e7cd175a8d6b57ca18a1de20d",
         "status": "LOCKED"
+    },
+    {
+        "timestamp": "2026-02-19T18:42:56.902226",
+        "actor": "Analyst_ID_8849",
+        "action": "SAR Approved (Unmodified AI Output)",
+        "target_account": "40264175723",
+        "jurisdiction": "India (FIU-IND)",
+        "cryptographic_hash": "eb1464c123287c522715399793f7d9e80cbd0f71d88bd5403c72e20258e7dd8b",
+        "status": "LOCKED"
+    },
+    {
+        "timestamp": "2026-02-19T19:04:38.674231",
+        "actor": "Analyst_ID_8849",
+        "action": "SAR Approved (With Human Overrides)",
+        "target_account": "40264175723",
+        "jurisdiction": "India (FIU-IND)",
+        "cryptographic_hash": "879d9982b3926d6780b57afe7f7de7439226a1aaf6ac679d49de47f219d7d3b0",
+        "status": "LOCKED"
     }
 ]

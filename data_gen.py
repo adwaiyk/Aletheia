@@ -103,7 +103,7 @@ df = df.sample(frac=1).reset_index(drop=True)
 df['txn_date_obj'] = pd.to_datetime(df['txn_date'], format="%d-%m-%Y")
 df = df.sort_values('txn_date_obj').drop('txn_date_obj', axis=1)
 
-csv_filename = "synthetic_banking_data.csv"
+csv_filename = "banking_data.csv"
 df.to_csv(csv_filename, index=False)
 
 print(f"Generated {len(df)} realistic transactions with standard 11-digit account numbers.")

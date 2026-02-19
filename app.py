@@ -17,12 +17,12 @@ except ImportError:
     st.error("⚠️ 'pdf_generator.py' not found. Please ensure it is in the same directory.")
 
 # --- 1. Page Configuration & Custom CSS ---
-st.set_page_config(page_title="Aletheia: SAR Generator", layout="wide")
+st.set_page_config(page_title="Aletheia", layout="wide")
 
 # Inject Custom CSS for the 'Glass Box' enterprise feel (Navy & Gold)
 st.markdown("""
     <style>
-    .stApp { background-color: #0A192F; color: #E6F1FF; }
+    .stApp { background-color: #0A192F; color: #E6F1FF; }   
     .stDataFrame { border: 1px solid #FFD700; }
     h1, h2, h3 { color: #FFD700; }
     .stTextArea textarea { background-color: #112240; color: #ffffff; border: 1px solid #FFD700; }
@@ -32,8 +32,8 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-st.title("⚖️ Aletheia: Local-First SAR Narrative Generator")
-st.markdown("### Compliance Workbench | FIU-IND SBA Ready")
+st.title("⚖️ ALETHEIA")
+st.markdown("### Compliance Workbench")
 
 # --- 2. Dynamic Ingestion (Sidebar) ---
 with st.sidebar:
@@ -136,7 +136,7 @@ if uploaded_file:
         st.dataframe(display_df, height=250, use_container_width=True)
 
         # Pyvis Network Visualization
-        st.subheader("🕸️ VISUALIZATION: Fund Flow Network")
+        st.subheader("🕸️ Fund Flow Network")
         
         # Build the Graph based on the filtered data
         net = Network(height='400px', width='100%', bgcolor='#112240', font_color='white')
@@ -172,11 +172,53 @@ if uploaded_file:
             st.error(f"Graph visualization error: {e}")
 
     with col_narrative:
-        st.subheader("📝 NARRATIVE: Draft STR (Editable)")
         
         # State management for the narrative
         if 'narrative' not in st.session_state:
             st.session_state.narrative = "Upload data and click 'Generate Narrative' to begin analysis..."
+            
+            # --- INNOVATION #1: THE FALSE-POSITIVE KILLER ---
+        st.markdown("---")
+        st.subheader("🛡️ AI 'Life Event' Clearance Engine")
+        st.caption("Automatically scans transaction context to dismiss legitimate life events, reducing operational false positives.")
+        
+        if st.button("🔍 Run AI Clearance Pre-Check"):
+            with st.spinner("Clearance Agent scanning transaction memos and open banking context..."):
+                # 1. Prepare data specifically for the clearance agent
+                clearance_data = display_df[['txn_date', 'amount', 'counterparty', 'transaction_memo']].to_string(index=False)
+                
+                # 2. The Clearance Prompt
+                clearance_prompt = f"""You are an AI False-Positive Clearance Agent for a Tier-1 Bank.
+Your job is to read transaction memos and determine if a flagged alert is actually a legitimate 'Life Event' (e.g., buying a house, receiving an inheritance, paying a medical bill).
+
+Transactions:
+{clearance_data}
+
+INSTRUCTIONS:
+1. If you see a clear, legitimate reason for the large transaction in the memos, output EXACTLY this format: 
+   "CLEARED: [Explain the life event found in 1 sentence]."
+2. If the transactions look like actual money laundering (structuring, smurfing, offshore wire transfers), output EXACTLY: 
+   "SUSPICIOUS: Proceed to SAR generation."
+
+Output nothing else."""
+
+                # 3. Call the Local LLM (Llama 3)
+                try:
+                    import requests
+                    response = requests.post("http://localhost:11434/api/generate", json={
+                        "model": "llama3",
+                        "prompt": clearance_prompt,
+                        "stream": False
+                    }).json()["response"].strip()
+                    
+                    # 4. Route the UI based on the AI's decision
+                    if response.startswith("CLEARED"):
+                        st.success(f"✅ **FALSE POSITIVE DISMISSED**\n\n{response}")
+                    else:
+                        st.error(f"🚨 **ANOMALY CONFIRMED**\n\n{response}")
+                except Exception as e:
+                    st.error(f"Clearance Agent offline: {e}")
+        st.markdown("---")
 
         if st.button("🤖 Generate Citation-Backed Narrative"):
             with st.spinner("Agentic AI analyzing typologies against PMLA guidelines..."):
