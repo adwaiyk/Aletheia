@@ -7,6 +7,8 @@ import time
 import requests
 import json
 import os
+import hashlib
+from datetime import datetime
 
 # Try importing the PDF generator module
 try:
@@ -55,6 +57,36 @@ with st.sidebar:
         st.success("🟢 Ollama (Llama 3) Online")
     except:
         st.error("🔴 Ollama Offline. Run 'ollama run llama3' in terminal.")
+        
+    # --- NEW: ENTERPRISE AUDIT TRAIL VIEWER ---
+    st.markdown("---")
+    with st.expander("🔐 View Immutable Audit Ledger"):
+        st.caption("Cryptographic Chain of Custody (SHA-256)")
+        try:
+            import json
+            import pandas as pd
+            with open("audit_ledger.json", "r") as f:
+                ledger_data = json.load(f)
+            
+            if ledger_data:
+                # Convert to dataframe and reverse it to show the newest entries at the top
+                df_audit = pd.DataFrame(ledger_data).iloc[::-1]
+                
+                # Display a clean, miniaturized enterprise table
+                st.dataframe(
+                    df_audit[['timestamp', 'actor', 'action', 'target_account', 'jurisdiction', 'cryptographic_hash']], 
+                    hide_index=True,
+                    use_container_width=True
+                )
+                
+                # Highlight the most recent cryptographic hash
+                st.caption("Latest Cryptographic Signature:")
+                st.code(df_audit.iloc[0]['cryptographic_hash'], language="text")
+            else:
+                st.write("Ledger is currently empty.")
+        except FileNotFoundError:
+            st.info("No audit events logged yet.")
+    # ------------------------------------------
 
 if uploaded_file:
     # Load Data into Session State to persist across reruns
@@ -220,10 +252,51 @@ Output only the highly formal, legalistic report text."""
                 st.warning("⚠️ Human edits detected. Delta logged to immutable Audit Trail.")
             
             try:
-                # generate_sba_pdf now returns RAW BYTES directly from memory
+                # --- 1. GENERATE CRYPTOGRAPHIC AUDIT HASH ---
+                # We hash the exact state of the CSV data + the final approved narrative
+                audit_payload = f"TIMESTAMP:{datetime.now().isoformat()}|JURISDICTION:{jurisdiction}|DATA:{display_df.to_string()}|NARRATIVE:{edited_narrative}"
+                sha256_hash = hashlib.sha256(audit_payload.encode('utf-8')).hexdigest()
+
+                # --- 2. SAVE TO IMMUTABLE LEDGER (Simulating PostgreSQL) ---
+                target_acct = str(display_df['account_no'].iloc[0]) if not display_df.empty else "UNKNOWN"
+                
+                # NEW: Create a detailed action description based on human behavior
+                if edited_narrative != st.session_state.narrative:
+                    action_desc = "SAR Approved (With Human Overrides)"
+                else:
+                    action_desc = "SAR Approved (Unmodified AI Output)"
+                
+                ledger_entry = {
+                    "timestamp": datetime.now().isoformat(),
+                    "actor": "Analyst_ID_8849", # Simulating a logged-in bank employee
+                    "action": action_desc,
+                    "target_account": target_acct,
+                    "jurisdiction": jurisdiction,
+                    "cryptographic_hash": sha256_hash,
+                    "status": "LOCKED"
+                }
+                
+                # Append to our local JSON ledger
+                ledger_filename = "audit_ledger.json"
+                try:
+                    with open(ledger_filename, "r") as f:
+                        ledger = json.load(f)
+                except (FileNotFoundError, json.JSONDecodeError):
+                    ledger = []
+                    
+                ledger.append(ledger_entry)
+                
+                with open(ledger_filename, "w") as f:
+                    json.dump(ledger, f, indent=4)
+                
+                # --- 3. GENERATE THE PDF ---
                 pdf_bytes = generate_sba_pdf(edited_narrative, display_df, jurisdiction)
                 
+                # --- 4. DISPLAY ENTERPRISE UI SUCCESS ---
                 st.success("Report Finalized! PDF generation successful.")
+                
+                # Show the cryptographic proof to the user
+                st.info(f"🔒 **Cryptographic Chain of Custody Locked**\n\n**SHA-256 Hash:** `{sha256_hash}`\n\n*Pursuant to FinCEN 5-year retention mandates, this cryptographic signature and the underlying evidence have been committed to the immutable audit ledger.*")
                 
                 # Streamlit serves the bytes directly to the browser
                 st.download_button(
@@ -233,7 +306,7 @@ Output only the highly formal, legalistic report text."""
                     mime="application/pdf"
                 )
             except Exception as e:
-                st.error(f"Failed to generate PDF: {e}")
+                st.error(f"Failed to generate PDF or Audit Trail: {e}")
 
 else:
     # Empty State

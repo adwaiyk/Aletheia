@@ -1,0 +1,11 @@
+[
+    {
+        "timestamp": "2026-02-19T18:13:58.914194",
+        "actor": "Analyst_ID_8849",
+        "action": "SAR Approved (Unmodified AI Output)",
+        "target_account": "41356372386",
+        "jurisdiction": "UK (NCA)",
+        "cryptographic_hash": "5e35ed2d89e785bb2b7c0000de578baa8a311a8e7cd175a8d6b57ca18a1de20d",
+        "status": "LOCKED"
+    }
+]
