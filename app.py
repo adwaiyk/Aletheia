@@ -3,12 +3,25 @@ import pandas as pd
 from pyvis.network import Network
 import streamlit.components.v1 as components
 import tempfile
-import time
 import requests
 import json
 import os
 import hashlib
 from datetime import datetime
+
+# --- ENTERPRISE FIX: BROWSER REFRESH RECOVERY ---
+STATE_FILE = "recovery_state.json"
+
+if 'narrative' not in st.session_state:
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, "r") as f:
+                saved_state = json.load(f)
+                st.session_state.narrative = saved_state.get("narrative", "")
+        except json.JSONDecodeError:
+            st.session_state.narrative = ""
+    else:
+        st.session_state.narrative = ""
 
 # Try importing the PDF generator module
 try:
@@ -33,13 +46,12 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 st.title("⚖️ ALETHEIA")
-st.markdown("### Compliance Workbench")
+st.markdown("### FinCrime Investigations Terminal")
 
 # --- 2. Dynamic Ingestion (Sidebar) ---
 with st.sidebar:
     st.header("📂 Case File Ingestion")
     uploaded_file = st.file_uploader("Upload Transaction CSV", type="csv")
-    st.info("Upload the 'synthetic_banking_data.csv' file generated in the previous step.")
     
     st.markdown("---")
     st.header("🌍 Jurisdiction Settings")
@@ -58,19 +70,22 @@ with st.sidebar:
     except:
         st.error("🔴 Ollama Offline. Run 'ollama run llama3' in terminal.")
         
-    # --- NEW: ENTERPRISE AUDIT TRAIL VIEWER ---
+    # --- ENTERPRISE AUDIT TRAIL VIEWER ---
     st.markdown("---")
+    st.header("🔍 Audit Ledger")
     with st.expander("🔐 View Immutable Audit Ledger"):
         st.caption("Cryptographic Chain of Custody (SHA-256)")
         try:
-            import json
-            import pandas as pd
             with open("audit_ledger.json", "r") as f:
                 ledger_data = json.load(f)
             
             if ledger_data:
                 # Convert to dataframe and reverse it to show the newest entries at the top
                 df_audit = pd.DataFrame(ledger_data).iloc[::-1]
+                
+                # Backward compatibility for old logs
+                if 'actor' not in df_audit.columns: df_audit['actor'] = "System"
+                if 'action' not in df_audit.columns: df_audit['action'] = "Approved"
                 
                 # Display a clean, miniaturized enterprise table
                 st.dataframe(
@@ -98,25 +113,21 @@ if uploaded_file:
     col_evidence, col_narrative = st.columns([1.2, 1]) # Left column slightly wider
 
     with col_evidence:
-        st.subheader("🔍 EVIDENCE: Transaction Data")
+        st.subheader("💰 Transaction Data")
         
         # --- THE RULE ENGINE (Deterministic Trigger) ---
         @st.cache_data
         def run_rule_engine(data):
-            suspects = set()
-            
-            # RULE 1: Structuring (Smurfing)
-            # Flags accounts with 3 or more cash deposits between INR 40k-50k
-            cash_deposits = data[(data['mode'] == 'CASH') & (data['txn_type'] == 'CREDIT') & (data['amount'] >= 40000) & (data['amount'] < 50000)]
-            structuring_counts = cash_deposits.groupby('account_no').size()
-            suspects.update(structuring_counts[structuring_counts >= 3].index.tolist())
-            
-            # RULE 2: Layering (High Value / Velocity)
-            # Flags accounts involved in single rapid transfers over INR 5 Lakhs (500,000)
-            large_transfers = data[data['amount'] >= 500000]
-            suspects.update(large_transfers['account_no'].unique().tolist())
-            
-            return list(suspects)
+            # Rule 1: Massive Anomaly (Catches the House Downpayment, Insider Trading, and Heavy Layering)
+            rule_1_flags = data[data['amount'] >= 1000000]['account_no'].unique()
+
+            # Rule 2: Structuring / Smurfing (Catches the Cash Structurer and Crypto Smurf)
+            # Looks for 3 or more transactions exactly between 45k and 50k
+            structuring_txns = data[(data['amount'] >= 45000) & (data['amount'] < 50000)]
+            rule_2_flags = structuring_txns.groupby('account_no').filter(lambda x: len(x) >= 3)['account_no'].unique()
+
+            # Combine flagged accounts
+            return list(set(rule_1_flags).union(set(rule_2_flags)))
 
         # 1. Run the data through the Rule Engine first
         suspect_accounts = run_rule_engine(df)
@@ -127,12 +138,10 @@ if uploaded_file:
             st.stop() # Halts the UI rendering here
             
         # 3. Populate dropdown ONLY with flagged suspects
-        filter_acct = st.selectbox(
-            f"🚨 Alert: {len(suspect_accounts)} Suspicious Account(s) Detected:", 
-            suspect_accounts
-        )
+        st.markdown(f"🚨 **Alert: {len(suspect_accounts)} Suspicious Account(s) Detected:**")
+        filter_acct = st.selectbox("Select Account for Investigation", suspect_accounts, label_visibility="collapsed")
         
-        display_df = df[df['account_no'] == filter_acct]
+        display_df = df[df['account_no'] == filter_acct].sort_values('txn_date')
         st.dataframe(display_df, height=250, use_container_width=True)
 
         # Pyvis Network Visualization
@@ -149,8 +158,7 @@ if uploaded_file:
             dst = str(row['counterparty'])
             w = float(row['amount'])
             
-            # Add nodes and edges
-            # Truncate labels for cleaner graph
+            # Add nodes and edges (Truncate labels for cleaner graph)
             src_label = src[:8] + "..." if len(src) > 8 else src
             dst_label = dst[:8] + "..." if len(dst) > 8 else dst
             
@@ -173,14 +181,11 @@ if uploaded_file:
 
     with col_narrative:
         
-        # State management for the narrative
-        if 'narrative' not in st.session_state:
-            st.session_state.narrative = "Upload data and click 'Generate Narrative' to begin analysis..."
-            
-            # --- INNOVATION #1: THE FALSE-POSITIVE KILLER ---
+        st.subheader("🗂️ Analyst Workspace")
+        
+        # --- INNOVATION #1: THE FALSE-POSITIVE KILLER ---
         st.markdown("---")
-        st.subheader("🛡️ AI 'Life Event' Clearance Engine")
-        st.caption("Automatically scans transaction context to dismiss legitimate life events, reducing operational false positives.")
+        st.subheader("🛡️ Contextual Alert Triage Engine")
         
         if st.button("🔍 Run AI Clearance Pre-Check"):
             with st.spinner("Clearance Agent scanning transaction memos and open banking context..."):
@@ -204,7 +209,6 @@ Output nothing else."""
 
                 # 3. Call the Local LLM (Llama 3)
                 try:
-                    import requests
                     response = requests.post("http://localhost:11434/api/generate", json={
                         "model": "llama3",
                         "prompt": clearance_prompt,
@@ -221,10 +225,9 @@ Output nothing else."""
         st.markdown("---")
 
         if st.button("🤖 Generate Citation-Backed Narrative"):
-            with st.spinner("Agentic AI analyzing typologies against PMLA guidelines..."):
+            with st.spinner("Agentic AI analyzing typologies against global guidelines..."):
                 
-                # 1. Prepare the Data Context (Now including KYC data)
-                # Assuming your df now has these columns, we pass them to the LLM
+                # 1. Prepare the Data Context
                 context_data = display_df.to_string(index=False)
                 
                 # --- THE ENTERPRISE MULTI-JURISDICTION ROUTER ---
@@ -269,12 +272,21 @@ Output only the highly formal, legalistic report text."""
                 }
                 
                 try:
+                    # FIRST: Send the request to the AI
                     response = requests.post(url, json=payload)
                     response.raise_for_status()
-                    # Parse Ollama's response
-                    ai_response = response.json()['response']
-                    st.session_state.narrative = ai_response
+                    
+                    # SECOND: Parse the AI's response
+                    generated_text = response.json()['response'].strip()
+                    
+                    # THIRD: Save to memory and hard drive to survive refresh
+                    st.session_state.narrative = generated_text
+                    with open(STATE_FILE, "w") as f:
+                        json.dump({"narrative": generated_text}, f)
+                        
+                    # FOURTH: Refresh the UI to show the text
                     st.rerun()
+                    
                 except requests.exceptions.ConnectionError:
                     st.error("🔴 Connection Error: Is Ollama running? Open your terminal and type `ollama run llama3`.")
                 except Exception as e:
@@ -282,27 +294,32 @@ Output only the highly formal, legalistic report text."""
 
         # Human-in-the-Loop Editor
         edited_narrative = st.text_area(
-            "Review and Edit Narrative for Part 7 (Grounds of Suspicion):", 
-            value=st.session_state.narrative, 
+            "Review and Edit Narrative", 
+            value=st.session_state.narrative if st.session_state.narrative else "Upload data and click 'Generate Narrative' to begin analysis...", 
             height=350,
             help="Citations link back to the Evidence panel."
         )
+        
+        # Auto-save Human Edits
+        if edited_narrative != st.session_state.narrative and edited_narrative != "Upload data and click 'Generate Narrative' to begin analysis...":
+            st.session_state.narrative = edited_narrative
+            with open(STATE_FILE, "w") as f:
+                json.dump({"narrative": edited_narrative}, f)
 
-        # Make the button name dynamic too!
-        if st.button(f"✅ Approve & Generate Official {jurisdiction} PDF"):
+        # Make the button name dynamic
+        if st.button(f"✅ Approve & Generate Official {jurisdiction} Exports"):
             if edited_narrative != st.session_state.narrative:
                 st.warning("⚠️ Human edits detected. Delta logged to immutable Audit Trail.")
             
             try:
                 # --- 1. GENERATE CRYPTOGRAPHIC AUDIT HASH ---
-                # We hash the exact state of the CSV data + the final approved narrative
                 audit_payload = f"TIMESTAMP:{datetime.now().isoformat()}|JURISDICTION:{jurisdiction}|DATA:{display_df.to_string()}|NARRATIVE:{edited_narrative}"
                 sha256_hash = hashlib.sha256(audit_payload.encode('utf-8')).hexdigest()
 
-                # --- 2. SAVE TO IMMUTABLE LEDGER (Simulating PostgreSQL) ---
+                # --- 2. SAVE TO IMMUTABLE LEDGER ---
                 target_acct = str(display_df['account_no'].iloc[0]) if not display_df.empty else "UNKNOWN"
                 
-                # NEW: Create a detailed action description based on human behavior
+                # Detailed action description based on human behavior
                 if edited_narrative != st.session_state.narrative:
                     action_desc = "SAR Approved (With Human Overrides)"
                 else:
@@ -310,7 +327,7 @@ Output only the highly formal, legalistic report text."""
                 
                 ledger_entry = {
                     "timestamp": datetime.now().isoformat(),
-                    "actor": "Analyst_ID_8849", # Simulating a logged-in bank employee
+                    "actor": "Analyst_ID_8849", 
                     "action": action_desc,
                     "target_account": target_acct,
                     "jurisdiction": jurisdiction,
@@ -318,7 +335,6 @@ Output only the highly formal, legalistic report text."""
                     "status": "LOCKED"
                 }
                 
-                # Append to our local JSON ledger
                 ledger_filename = "audit_ledger.json"
                 try:
                     with open(ledger_filename, "r") as f:
@@ -331,25 +347,63 @@ Output only the highly formal, legalistic report text."""
                 with open(ledger_filename, "w") as f:
                     json.dump(ledger, f, indent=4)
                 
-                # --- 3. GENERATE THE PDF ---
+                # --- 3. GENERATE THE EXPORTS ---
                 pdf_bytes = generate_sba_pdf(edited_narrative, display_df, jurisdiction)
                 
-                # --- 4. DISPLAY ENTERPRISE UI SUCCESS ---
-                st.success("Report Finalized! PDF generation successful.")
+                json_data = json.dumps({
+                    "timestamp": datetime.now().isoformat(),
+                    "jurisdiction": jurisdiction,
+                    "target_account": target_acct,
+                    "narrative": edited_narrative,
+                    "cryptographic_hash": sha256_hash
+                }, indent=4)
+
+                xml_data = f"""<?xml version="1.0" encoding="UTF-8"?>
+<SuspiciousActivityReport>
+    <Timestamp>{datetime.now().isoformat()}</Timestamp>
+    <Jurisdiction>{jurisdiction}</Jurisdiction>
+    <TargetAccount>{target_acct}</TargetAccount>
+    <Narrative>{edited_narrative}</Narrative>
+    <CryptographicHash>{sha256_hash}</CryptographicHash>
+</SuspiciousActivityReport>"""
+
+                latex_data = f"""\\documentclass{{article}}
+\\usepackage[utf8]{{inputenc}}
+\\begin{{document}}
+\\title{{Suspicious Activity Report}}
+\\author{{Aletheia FinCrime Terminal}}
+\\date{{\\today}}
+\\maketitle
+
+\\section*{{Metadata}}
+\\textbf{{Jurisdiction:}} {jurisdiction} \\\\
+\\textbf{{Target Account:}} {target_acct} \\\\
+\\textbf{{Cryptographic Hash:}} \\texttt{{{sha256_hash}}}
+
+\\section*{{Grounds for Suspicion}}
+{edited_narrative}
+
+\\end{{document}}"""
+
+                # --- 4. DISPLAY ENTERPRISE UI SUCCESS & BUTTONS ---
+                st.success("Report Finalized! Secure exports generated.")
+                st.info(f"🔒 **Cryptographic Chain of Custody Locked**\n\n**SHA-256 Hash:** `{sha256_hash}`\n\n*Pursuant to retention mandates, this cryptographic signature and the underlying evidence have been committed to the immutable audit ledger.*")
                 
-                # Show the cryptographic proof to the user
-                st.info(f"🔒 **Cryptographic Chain of Custody Locked**\n\n**SHA-256 Hash:** `{sha256_hash}`\n\n*Pursuant to FinCEN 5-year retention mandates, this cryptographic signature and the underlying evidence have been committed to the immutable audit ledger.*")
+                st.write("**Download Formal Reports & Machine-Readable Artifacts:**")
+                col1, col2, col3, col4 = st.columns(4)
                 
-                # Streamlit serves the bytes directly to the browser
-                st.download_button(
-                    label=f"📄 Download Official Report (PDF)",
-                    data=pdf_bytes,
-                    file_name=f"Aletheia_{jurisdiction[:3]}_SAR.pdf",
-                    mime="application/pdf"
-                )
+                with col1:
+                    st.download_button("📄 PDF Document", data=pdf_bytes, file_name=f"Aletheia_SAR_{jurisdiction[:3]}.pdf", mime="application/pdf", use_container_width=True)
+                with col2:
+                    st.download_button("｛｝ JSON Payload", data=json_data, file_name=f"Aletheia_SAR_{jurisdiction[:3]}.json", mime="application/json", use_container_width=True)
+                with col3:
+                    st.download_button("🌐 XML Feed", data=xml_data, file_name=f"Aletheia_SAR_{jurisdiction[:3]}.xml", mime="application/xml", use_container_width=True)
+                with col4:
+                    st.download_button("∑ LaTeX Source", data=latex_data, file_name=f"Aletheia_SAR_{jurisdiction[:3]}.tex", mime="text/plain", use_container_width=True)
+
             except Exception as e:
-                st.error(f"Failed to generate PDF or Audit Trail: {e}")
+                st.error(f"Failed to generate Export Artifacts: {e}")
 
 else:
     # Empty State
-    st.info("👈 Please upload the 'synthetic_banking_data.csv' from the sidebar to begin the investigation.")
+    st.info("👈 Please upload the data in the sidebar to begin.")
