@@ -157,47 +157,31 @@ if uploaded_file:
                 if jurisdiction == "India (FIU-IND)":
                     regulator = "Financial Intelligence Unit - India (FIU-IND)"
                     law_context = "Prevention of Money Laundering Act, 2002 (PMLA)"
-                    rule_context = "Focus on 'Structuring' to evade the INR 50,000 PAN reporting threshold."
-                    form_format = """
-                    - PART 4: INDIVIDUALS LINKED TO TRANSACTIONS (Extract Name, ID)
-                    - PART 7.1: REASONS FOR SUSPICION (Categorize the anomaly)
-                    - PART 7.2: GROUNDS OF SUSPICION (Chronological narrative with citations)
-                    """
+                    rule_context = "Focus on 'Structuring' to evade the INR 50,000 PAN reporting threshold. Specifically map behavior to 'Reason for suspicion: Value just under the reporting threshold amount in an apparent attempt to avoid reporting'."
                 
                 elif jurisdiction == "USA (FinCEN)":
                     regulator = "Financial Crimes Enforcement Network (FinCEN)"
                     law_context = "Bank Secrecy Act (31 U.S.C. 5318)"
                     rule_context = "Focus on 'Structuring' to evade the $10,000 Currency Transaction Report (CTR) limit, or anomalies aggregating over $5,000."
-                    form_format = """
-                    - PART II: SUSPECT INFORMATION (Extract Name, Address, DOB, SSN/TIN if available)
-                    - PART III: SUSPICIOUS ACTIVITY INFORMATION (Date range, Total dollar amount involved)
-                    - PART V: SUSPICIOUS ACTIVITY EXPLANATION/DESCRIPTION (Chronological narrative with citations)
-                    """
                 
                 else: # UK (FCA)
                     regulator = "Financial Conduct Authority (FCA)"
                     law_context = "UK Market Abuse Regulation (UK MAR)"
-                    rule_context = "Focus on suspected Market Abuse, Insider Dealing, or suspicious financial instrument orders."
-                    form_format = """
-                    - IDENTITIES OF PERSONS CARRYING OUT TRANSACTIONS (Extract Name, DOB, Address)
-                    - DESCRIPTION OF THE TRANSACTION(S) (Include prices, sizes, and instrument details if available)
-                    - REASONS FOR SUSPECTING INSIDER DEALING/MARKET MANIPULATION (Chronological narrative with citations)
-                    """
+                    rule_context = "Focus on suspected Market Abuse, Insider Dealing, or suspicious financial instrument orders based on the transaction memos."
 
                 # 2. The Dynamic Master Prompt
                 system_prompt = f"""You are a Senior Financial Crime Compliance Officer.
-Your task is to draft an official Suspicious Activity Report for {regulator} under the {law_context}.
+Your task is to draft the highly formal narrative section for a Suspicious Activity Report to {regulator} under the {law_context}.
 
-Here is the transaction and KYC history for the flagged account:
+Here is the transaction history for the flagged account:
 {context_data}
 
 INSTRUCTIONS:
 1. LEGAL ANALYSIS: {rule_context}
 2. CITATION REQUIREMENT (CRITICAL): Every factual claim (amounts, dates, behaviors) MUST be cited with the exact Txn ID in brackets. Example: "A deposit of 48,000 was made [1D640F1C9085]."
-3. FORMATTING: You MUST structure your report using EXACTLY these official form headers:
-{form_format}
+3. FORMATTING: Output ONLY the chronological narrative and grounds for suspicion. Do NOT include KYC details (Name, DOB) in your output, as those are handled by the system wrapper.
 
-Output only the highly formal, legalistic report text. Do not include conversational filler."""
+Output only the highly formal, legalistic report text."""
 
                 # 3. Call Local Ollama (Llama 3) API
                 url = "http://localhost:11434/api/generate"
@@ -232,21 +216,16 @@ Output only the highly formal, legalistic report text. Do not include conversati
 
         # Make the button name dynamic too!
         if st.button(f"✅ Approve & Generate Official {jurisdiction} PDF"):
-            # The diff checker logic
             if edited_narrative != st.session_state.narrative:
                 st.warning("⚠️ Human edits detected. Delta logged to immutable Audit Trail.")
             
             try:
-                # --- THIS IS THE UPDATED LINE ---
-                # We pass 'jurisdiction' as the third argument now
-                pdf_path = generate_sba_pdf(edited_narrative, display_df, jurisdiction)
+                # generate_sba_pdf now returns RAW BYTES directly from memory
+                pdf_bytes = generate_sba_pdf(edited_narrative, display_df, jurisdiction)
                 
-                with open(pdf_path, "rb") as pdf_file:
-                    pdf_bytes = pdf_file.read()
-                    
-                st.success("Report Finalized! PDF generation triggered.")
+                st.success("Report Finalized! PDF generation successful.")
                 
-                # Show the download button
+                # Streamlit serves the bytes directly to the browser
                 st.download_button(
                     label=f"📄 Download Official Report (PDF)",
                     data=pdf_bytes,
