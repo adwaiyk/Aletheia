@@ -86,8 +86,8 @@ Because Aletheia relies on a strict zero-data egress architecture, it must be ru
 ### Installation Steps
 1. Clone the repository:
     ```bash
-git clone [https://github.com/adwaiyk/Aletheia.git](https://github.com/adwaiyk/Aletheia.git)
-cd Aletheia
+    git clone [https://github.com/adwaiyk/Aletheia.git](https://github.com/adwaiyk/Aletheia.git)
+    cd Aletheia
 
 2. Install dependencies:
     ```bash
