@@ -1,92 +1,102 @@
-# ALETHEIA: Zero-Data-Egress FinCrime Investigations Terminal
+# ALETHEIA: Zero-Data-Egress FinCrime Investigations Terminal (A Demo)
 
-[cite_start]**Barclays Hack-O-Hire Solution** [cite: 11]
-[cite_start]**Problem Statement:** SAR Narrative Generator with Audit Trail [cite: 12]
-[cite_start]**Team:** Better Call SAR [cite: 12]
+**Barclays Hack-O-Hire Solution**
+**Problem Statement:** SAR Narrative Generator with Audit Trail
+**Team:** Better Call SAR
 
-Aletheia is an advanced, end-to-end Agentic AI compliance workbench designed to eradicate false-positive alert waste and automate the generation of Suspicious Activity Reports (SARs) within a strictly air-gapped, Zero-Data-Egress architecture. 
+Aletheia is an advanced, end-to-end Agentic AI compliance workbench designed to eradicate false-positive alert waste and automate the generation of Suspicious Activity Reports (SARs) within a strictly air-gapped, zero-data-egress architecture. 
 
 ---
 
 ## 1. The Problem Statement: The Compliance Crisis
-[cite_start]Global financial institutions face massive bottlenecks in Anti-Money Laundering (AML) operations across four interconnected domains[cite: 18]:
+Global financial institutions face severe operational and regulatory bottlenecks in Anti-Money Laundering (AML) operations:
 
-* [cite_start]**Compliance & Risk Management:** Manual drafting results in long turnarounds and inconsistent risk descriptions[cite: 21, 22]. [cite_start]A poor audit trail leads to low defensibility, which impacts the bank through fines, regulatory scrutiny, and credibility loss[cite: 22, 23].
-* [cite_start]**Operations & Document Processing:** Overloaded teams face heavy backlogs, and manual handling leads to errors[cite: 31]. [cite_start]The lack of standard templates requires repeated corrections, resulting in missed risks and incomplete reporting[cite: 31, 32].
-* [cite_start]**Data & Analytics:** It is highly difficult to detect complex patterns and perform manual transaction linking[cite: 25, 26]. [cite_start]Limited trend insights result in missed risks, incomplete reporting, and inconsistent outputs[cite: 27, 28].
-* [cite_start]**Technology & Compliance Systems:** The lack of AI assistance requires high effort, and limited traceability causes issues with regulator queries[cite: 34]. [cite_start]Fragmented workflows impact the institution through low transparency, human errors, and weaker compliance confidence[cite: 34, 35].
-
----
-
-## 2. Proposed Solution & Innovations
-Aletheia transforms AML compliance from a reactive cost center into a proactive, AI-driven powerhouse by addressing these challenges with the following innovations:
-
-1. [cite_start]**End-to-End Agentic Automation:** An autonomous system that ingests, analyzes, generates, validates, and audits SAR narratives[cite: 39].
-2. [cite_start]**Contextual Linking:** Early data ingestion that links transactions, entities, and watchlists for deeper contextual intelligence[cite: 38].
-3. [cite_start]**Hybrid Detection Engine:** Combines deterministic rules, ML classifiers (Anomaly detection), and dynamic contextual risk scoring[cite: 52].
-4. [cite_start]**Grounded Generation:** A Retrieval-Augmented Generation (RAG) pipeline utilizing SAR templates and source trace mapping to completely prevent AI hallucinations[cite: 54].
-5. [cite_start]**Audit Transparency:** Full explainability with a time-locked audit trail capturing data sources, reasoning steps, model versions, and human edits[cite: 42].
-6. [cite_start]**Human Oversight:** A human-in-the-loop review system enabling analyst edits, overrides, and continuous feedback learning[cite: 40].
-7. [cite_start]**Zero-Trust Security:** Built securely by design with Role-Based Access Control (RBAC), Personally Identifiable Information (PII) masking, prompt protection, and strict data isolation across agents[cite: 41].
+* **Compliance and Risk Management:** Manual drafting of SARs results in prolonged turnaround times and inconsistent risk descriptions. The absence of a robust audit trail leads to low regulatory defensibility, exposing banks to severe fines and credibility loss.
+* **Operations and Document Processing:** Overloaded investigation teams face massive backlogs. Manual data handling introduces human error, while the lack of standardized reporting templates necessitates constant corrections.
+* **Data and Analytics:** Detecting complex financial crime patterns (such as layering and smurfing) across massive datasets is incredibly difficult manually, leading to missed risks and incomplete regulatory reporting.
+* **Technology and Systems:** Financial institutions are unable to utilize powerful cloud-based AI due to strict Data Residency and Privacy laws (PII cannot be sent to external APIs). This leaves legacy systems fragmented, opaque, and highly inefficient.
 
 ---
 
-## 3. System & Agentic AI Architecture
+## 2. Proposed Solution and Innovations
+Aletheia transforms AML compliance from a reactive cost center into a proactive, AI-driven powerhouse by addressing these challenges with the following core innovations:
 
-[cite_start]Aletheia's architecture utilizes a stateful LangGraph orchestration that directs data through specialized AI agents[cite: 70, 72]. 
-
-### Orchestration Flow & Methodologies
-* [cite_start]**Phase 1: Risk Assessment & Knowledge Embedding:** The system converts regulatory documents to vector embeddings and stores them in a ChromaDB Vector Database[cite: 107, 118]. [cite_start]Concurrently, an ML Risk Scoring Model evaluates incoming alerts, utilizing SHAP to extract and explain feature importance[cite: 98, 101, 124].
-* [cite_start]**Phase 2: Semantic Retrieval:** When an alert is triggered, LlamaIndex performs a semantic search against the ChromaDB vector database[cite: 99, 104, 109]. [cite_start]This retrieves the exact FinCEN guidelines and historical SAR templates that match the specific financial crime typology[cite: 102, 126].
-* [cite_start]**Phase 3: State Orchestration & Narrative Generation:** The LangChain Orchestrator maintains a "State Object" (case file) that travels through the pipeline[cite: 106, 129, 130]. 
-    * [cite_start]A **PII Scrubber** anonymizes data and updates the state[cite: 112, 131].
-    * [cite_start]A **Narrative Planner Agent** serves as the architect, creating a structured plan[cite: 105, 139].
-    * [cite_start]A **Text Generation Agent** utilizes RAG to draft the narrative grounded in legal rules[cite: 110, 115, 140].
-    * [cite_start]A **Compliance Validator Agent** ensures the narrative answers the essential 5 W's and meets jurisdiction-specific standards (e.g., FinCEN, FIU-IND)[cite: 120, 143].
-* [cite_start]**Phase 4: Auditability:** Every single time the state updates and flows across an edge, LangGraph automatically saves a Checkpoint of the entire state to a PostgreSQL database[cite: 103, 127]. [cite_start]This allows auditors to replay the exact flow of data, step-by-step, proving the AI's chain of thought[cite: 128].
+* **End-to-End Agentic Automation:** An autonomous system that ingests financial ledgers, analyzes anomalies, generates narratives, and audits the final output.
+* **Contextual Alert Triage Engine (The False-Positive Killer):** A semantic AI engine that evaluates transaction memos to dismiss legitimate life events (e.g., house downpayments), drastically reducing wasted investigative hours.
+* **Hybrid Detection Engine:** Combines deterministic mathematical rules (to catch exact structuring thresholds) with dynamic contextual risk scoring.
+* **Enterprise Multi-Jurisdictional Routing:** Dynamically aligns the AI's legal reasoning with regional frameworks, switching seamlessly between USA (FinCEN), India (FIU-IND), and UK (NCA) regulations.
+* **Cryptographic Audit Ledger:** Provides absolute explainability with a time-locked audit trail. The system hashes the exact state of the evidence, human overrides, and final narrative using SHA-256, establishing an immutable chain of custody.
+* **Zero-Trust Security:** Built securely by design. By running the Large Language Model entirely locally, the system guarantees that sensitive PII never leaves the bank's internal network.
 
 ---
 
-## 4. Tech Stack
+## 3. System and Agentic AI Architecture
 
-| Technology | Architectural Purpose |
-| :--- | :--- |
-| **LangGraph** | [cite_start]Orchestration/Agent: Enables stateful, directed execution graphs with controlled routing, loops, and audit-aware state memory[cite: 145]. |
-| **LangChain** | [cite_start]Orchestration/Agent: Prevents hallucinated narratives by utilizing RAG with ChromaDB grounding to map templates and source traces[cite: 145]. |
-| **Llama 3 / Mistral 7B** | [cite_start]LLM Layer: Local models running via Ollama ensuring template-based, regulation-backed generation with zero-data egress[cite: 145]. |
-| **PostgreSQL** | [cite_start]Database: Stores the immutable fact and audit log, acting as structured state memory[cite: 145]. |
-| **ChromaDB** | [cite_start]VectorDB: A lightweight, open-source database for regulatory memory and context retrieval[cite: 145]. |
-| **FastAPI** | [cite_start]Backend API Layer: Enforces zero-trust boundaries via role-based privacy controls and PII tokenization before LLM calls[cite: 145]. |
-| **Frontend UI (React/Streamlit)** | [cite_start]User Interface: Supports edit-approve workflows, explainability views, and human overrides tied to the audit log[cite: 145]. |
-| **Python (Scikit-learn/SHAP)** | [cite_start]Feature Engineering: Manages explainable risk scoring, producing interpretable risk factors before narrative drafting[cite: 145]. |
-| **LlamaIndex** | [cite_start]Retrieval: Provides contextual regulatory grounding per alert over ChromaDB[cite: 145]. |
-| **Docker** | [cite_start]Deployment: Dockerized microservices and FastAPI async endpoints enabling horizontal scaling[cite: 145]. |
+Aletheia utilizes a stateful orchestration pipeline that directs data through specialized execution layers.
+
+### Orchestration Flow
+1. **Risk Assessment and Knowledge Embedding:** The system converts regulatory documents (like FinCEN guidelines) into vector embeddings. Concurrently, a deterministic rule engine filters thousands of raw transactions to isolate high-risk anomalies.
+2. **Semantic Retrieval:** When a suspect account is flagged, the Retrieval-Augmented Generation (RAG) pipeline performs a semantic search to extract the exact historical SAR templates that match the specific financial crime typology.
+3. **State Orchestration and Narrative Generation:** A stateful object (the case file) travels through the pipeline:
+    * A Data Scrubber isolates necessary transaction context.
+    * A Narrative Planner Agent outlines the required SAR structure.
+    * A Text Generation Agent utilizes the local LLM to draft a highly formal, citation-backed narrative.
+4. **Auditability and Export:** Once reviewed by a human analyst, the system generates a cryptographic hash of the entire session. It then automatically compiles the data into machine-readable XML, JSON, LaTeX, and PDF formats for downstream integration.
+
+---
+
+## 4. Technology Stack
+
+* **Orchestration:** LangGraph and LangChain (Stateful execution graphs and RAG pipelines)
+* **LLM Engine:** Ollama running Llama 3 / Mistral 7B (Local execution for zero-data egress)
+* **Vector Database:** ChromaDB (Lightweight, open-source regulatory memory)
+* **Frontend Interface:** Streamlit (React-based UI for edit-approve workflows and network visualizations)
+* **Data Processing:** Pandas, NumPy, and PyVis (Feature engineering, deterministic rule triggering, and fund flow network mapping)
+* **Security and Auditing:** Python Hashlib (SHA-256) and local JSON/PostgreSQL (Immutable ledger)
 
 ---
 
 ## 5. Business Impact
 By deploying Aletheia, Tier-1 financial institutions realize immediate operational transformations:
-1. [cite_start]**Eradicating the 95% False Positive Waste** [cite: 229]
-2. [cite_start]**Massive Operational Cost Reduction** [cite: 231, 232]
-3. [cite_start]**Eliminating Regulatory Backlogs** [cite: 233]
+* **Eradicating the 95% False Positive Waste:** Slashes the noise of non-suspicious alerts automatically, saving millions in operational overhead.
+* **Massive Operational Cost Reduction:** Frees up thousands of manual investigation hours, allowing human analysts to focus on genuine, high-priority threats.
+* **Eliminating Regulatory Backlogs:** Accelerates SAR filing times from weeks to seconds, maintaining total compliance and avoiding regulatory penalties.
 
 ---
 
 ## 6. Future Scope
-Aletheia's architecture is built to scale toward the ultimate goals of global compliance:
+Aletheia's architecture is built to scale toward the ultimate goals of global enterprise compliance:
 
-* [cite_start]**"Always-On" Perpetual KYC & OSINT Integration:** An autonomous system that scans global media, court records, and dark web sources in real time[cite: 236, 240]. [cite_start]Risk scores update instantly before major transactions clear, flagging threats as soon as a client's public profile shifts[cite: 241].
-* [cite_start]**Zero-Knowledge Consortium Data Sharing:** Allows banks (e.g., Barclays and HSBC) to share fraud typologies between institutions through federated learning without exposing customer data[cite: 237, 242]. [cite_start]Cryptographic checks confirm matches across institutions while maintaining data privacy and residency compliance[cite: 243].
-* [cite_start]**Predictive Threat Detection & Network Mapping:** AI-driven graph models to identify shell company networks and anticipate illicit fund flows[cite: 238, 239, 244]. [cite_start]Synthetic, privacy-safe data trains models to detect emerging money laundering risks before they surface[cite: 245].
+* **Perpetual KYC and OSINT Integration:** Deploying an autonomous background agent to constantly scrape global adverse media, court registries, and dark web forums. This shifts compliance from periodic reviews to real-time, dynamic risk re-scoring.
+* **Zero-Knowledge Consortium Data Sharing:** Utilizing Federated Learning to share known money laundering typologies between global institutions (e.g., Barclays and HSBC). This achieves collaborative threat intelligence without ever exposing underlying customer PII.
+* **Predictive Threat Hunting:** Upgrading the pipeline with predictive Graph Machine Learning to map complex shell company networks and anticipate the next node in an illicit fund flow before the money is moved.
 
 ---
 
-## 7. Local Installation & Demo Guide
+## 7. Local Installation and Demo Setup
 
-Because Aletheia relies on a **Zero-Data Egress** architecture, it must be run locally to interface with your offline LLM.
+Because Aletheia relies on a strict zero-data egress architecture, it must be run locally to interface with your offline LLM.
 
 ### Prerequisites
-1. Install Python 3.10+
-2. Install Ollama and pull the Llama 3 model:
+1. Install Python 3.10 or higher.
+2. Install Ollama (ollama.ai) and pull the Llama 3 model by running the following command in your terminal:
    ```bash
    ollama run llama3
+
+### Installation Steps
+1. Clone the repository:
+    ```bash
+git clone [https://github.com/adwaiyk/Aletheia.git](https://github.com/adwaiyk/Aletheia.git)
+cd Aletheia
+
+2. Install dependencies:
+    ```bash
+    pip install -r requirements.txt
+
+3. Run Data Generator:
+    ```bash
+    python data_gen.py
+
+4. Run App
+    ```bash
+    streamlit run app.py
