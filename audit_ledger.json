@@ -79,5 +79,23 @@
         "jurisdiction": "India (FIU-IND)",
         "cryptographic_hash": "6f5983df8ee9f8558aa102140e5326c6246ebdffca25b75dc27e68af9d091fbb",
         "status": "LOCKED"
+    },
+    {
+        "timestamp": "2026-02-19T22:08:01.660658",
+        "actor": "Analyst_ID_8849",
+        "action": "SAR Approved (Unmodified AI Output)",
+        "target_account": "78820846537",
+        "jurisdiction": "India (FIU-IND)",
+        "cryptographic_hash": "443a8390d8f6be8cc40e83dd8fdf378945004b13462833a36f464cf88b7de4a8",
+        "status": "LOCKED"
+    },
+    {
+        "timestamp": "2026-02-19T23:24:07.554971",
+        "actor": "Analyst_ID_8849",
+        "action": "SAR Approved (Unmodified AI Output)",
+        "target_account": "78820846537",
+        "jurisdiction": "India (FIU-IND)",
+        "cryptographic_hash": "168b35ebafe0b8221ce47785b07ede2e4e8f6170b2f9e61ee569605bf813554d",
+        "status": "LOCKED"
     }
 ]
